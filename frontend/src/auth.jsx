@@ -1,0 +1,57 @@
+import { useEffect, useRef, useState } from "react";
+import { Eye, EyeOff, FlaskConical, KeyRound, LockKeyhole, Mail, ShieldCheck, ShoppingBag } from "lucide-react";
+import { Link, Navigate, Outlet, useLocation, useNavigate, useSearchParams } from "react-router";
+import { Button } from "./components";
+import { authService } from "./services/auth-service";
+import { useStore } from "./store";
+
+const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function AuthField({ label, icon: Icon, error, type = "text", ...props }) {
+  const [visible, setVisible] = useState(false);
+  const password = type === "password";
+  return <label className="block text-sm font-semibold text-navy">{label}<span className={`mt-2 flex items-center rounded-xl border bg-white px-3 focus-within:ring-2 focus-within:ring-teal/20 ${error ? "border-red-400" : "border-slate-200 focus-within:border-teal"}`}><Icon size={18} className="shrink-0 text-slate-400"/><input className="min-w-0 flex-1 bg-transparent px-3 py-3 outline-none" type={password && visible ? "text" : type} aria-invalid={!!error} {...props}/>{password&&<button type="button" onClick={()=>setVisible(!visible)} aria-label={visible?"Hide password":"Show password"} className="p-1 text-slate-400">{visible?<EyeOff size={18}/>:<Eye size={18}/>}</button>}</span>{error&&<span role="alert" className="mt-1.5 block text-xs text-red-600">{error}</span>}</label>;
+}
+
+function AuthShell({ eyebrow, title, text, children }) {
+  const { record } = useStore(); const tracked = useRef(false);
+  useEffect(()=>{if(!tracked.current){record("auth_page_view",title,{});tracked.current=true}},[record,title]);
+  return <div className="page grid min-h-[calc(100vh-10rem)] place-items-center py-10"><div className="grid w-full max-w-5xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl lg:grid-cols-[.9fr_1.1fr]"><aside className="hidden bg-navy p-10 text-white lg:flex lg:flex-col lg:justify-between"><Link to="/" className="flex items-center gap-2 font-extrabold"><span className="grid size-10 place-items-center rounded-xl bg-teal"><FlaskConical size={21}/></span>Usability Lab</Link><div><p className="text-sm font-bold uppercase tracking-widest text-aqua">Research-friendly shopping</p><h2 className="mt-4 text-4xl font-extrabold leading-tight">Shop as a guest or save your demo experience.</h2><p className="mt-4 leading-7 text-slate-300">Accounts are optional. Anonymous participant tasks always remain available.</p></div><div className="flex items-center gap-2 text-sm text-slate-300"><ShieldCheck size={18} className="text-aqua"/>No real purchases or payment data</div></aside><section className="p-6 sm:p-10 lg:p-12"><p className="eyebrow">{eyebrow}</p><h1 className="mt-2 text-3xl font-extrabold">{title}</h1><p className="mt-2 text-sm leading-6 text-slate-500">{text}</p><div className="mt-7">{children}</div></section></div></div>;
+}
+
+export function Login() {
+  const {login}=useStore(); const navigate=useNavigate(); const [params]=useSearchParams(); const [form,setForm]=useState({email:"",password:"",role:"participant"}); const [errors,setErrors]=useState({}); const [loading,setLoading]=useState(false); const [serverError,setServerError]=useState("");
+  const reason = params.get("reason");
+  const redirectTarget = params.get("redirect");
+  const registerUrl = redirectTarget ? `/register?redirect=${encodeURIComponent(redirectTarget)}${reason ? `&reason=${reason}` : ""}` : "/register";
+  const submit=async(e)=>{e.preventDefault();const next={};if(!emailPattern.test(form.email))next.email="Enter a valid email address.";if(!form.password)next.password="Enter your password.";setErrors(next);if(Object.keys(next).length)return;setLoading(true);setServerError("");try{const user=await login(form);navigate(redirectTarget||(user.role==="researcher"?"/admin":"/"))}catch(err){setServerError(err.message)}finally{setLoading(false)}};
+  return <AuthShell eyebrow="Welcome back" title="Sign in" text="Use any valid-looking email and password in this simulated authentication flow.">{reason==="cart"&&<div role="status" className="mb-5 flex items-center gap-2.5 rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-sm font-semibold text-amber-900"><ShoppingBag size={18} className="shrink-0 text-amber-600"/><span>Please sign in to add items to your cart and proceed.</span></div>}<form onSubmit={submit} noValidate className="space-y-5"><AuthField label="Email address" icon={Mail} type="email" autoComplete="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} error={errors.email}/><AuthField label="Password" icon={LockKeyhole} type="password" autoComplete="current-password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})} error={errors.password}/><div className="flex flex-wrap items-center justify-between gap-3"><label className="flex items-center gap-2 text-sm text-slate-600"><input type="checkbox" checked={form.role==="researcher"} onChange={e=>setForm({...form,role:e.target.checked?"researcher":"participant"})} className="accent-teal"/>Researcher demo access</label><Link to="/forgot-password" className="text-sm font-semibold text-teal">Forgot password?</Link></div>{serverError&&<div role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-700">{serverError}</div>}<Button className="w-full" disabled={loading}>{loading?"Signing in…":"Sign in"}</Button></form><p className="mt-6 text-center text-sm text-slate-500">New here? <Link to={registerUrl} className="font-bold text-teal">Create an account</Link></p><div className="my-5 flex items-center gap-3 text-xs text-slate-400"><span className="h-px flex-1 bg-slate-200"/>or<span className="h-px flex-1 bg-slate-200"/></div><Link to="/catalogue"><Button variant="secondary" className="w-full">Continue browsing as guest</Button></Link></AuthShell>;
+}
+
+export function Register() {
+  const {register}=useStore(); const navigate=useNavigate(); const [params]=useSearchParams(); const [form,setForm]=useState({name:"",email:"",password:"",confirm:""}); const [errors,setErrors]=useState({}); const [loading,setLoading]=useState(false);
+  const reason = params.get("reason");
+  const redirectTarget = params.get("redirect");
+  const loginUrl = redirectTarget ? `/login?redirect=${encodeURIComponent(redirectTarget)}${reason ? `&reason=${reason}` : ""}` : "/login";
+  const submit=async(e)=>{e.preventDefault();const next={};if(form.name.trim().length<2)next.name="Enter your full name.";if(!emailPattern.test(form.email))next.email="Enter a valid email address.";if(form.password.length<8)next.password="Use at least 8 characters.";if(form.confirm!==form.password)next.confirm="Passwords do not match.";setErrors(next);if(Object.keys(next).length)return;setLoading(true);try{await register(form);navigate(redirectTarget||"/")}finally{setLoading(false)}};
+  return <AuthShell eyebrow="Optional account" title="Create an account" text="Save a demo profile without interrupting anonymous research sessions.">{reason==="cart"&&<div role="status" className="mb-5 flex items-center gap-2.5 rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-sm font-semibold text-amber-900"><ShoppingBag size={18} className="shrink-0 text-amber-600"/><span>Create an account to add items to your cart and proceed.</span></div>}<form onSubmit={submit} noValidate className="space-y-5"><AuthField label="Full name" icon={ShieldCheck} autoComplete="name" value={form.name} onChange={e=>setForm({...form,name:e.target.value})} error={errors.name}/><AuthField label="Email address" icon={Mail} type="email" autoComplete="email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} error={errors.email}/><AuthField label="Password" icon={LockKeyhole} type="password" autoComplete="new-password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})} error={errors.password}/><AuthField label="Confirm password" icon={LockKeyhole} type="password" autoComplete="new-password" value={form.confirm} onChange={e=>setForm({...form,confirm:e.target.value})} error={errors.confirm}/><p className="text-xs leading-5 text-slate-500">For this demo, passwords are validated but never stored. A backend authentication provider can replace this service later.</p><Button className="w-full" disabled={loading}>{loading?"Creating account…":"Create account"}</Button></form><p className="mt-6 text-center text-sm text-slate-500">Already registered? <Link to={loginUrl} className="font-bold text-teal">Sign in</Link></p></AuthShell>;
+}
+
+export function ForgotPassword() {
+  const [email,setEmail]=useState(""); const [error,setError]=useState(""); const [loading,setLoading]=useState(false); const [sent,setSent]=useState(false);
+  const submit=async(e)=>{e.preventDefault();if(!emailPattern.test(email)){setError("Enter a valid email address.");return}setLoading(true);await authService.requestReset(email);setLoading(false);setSent(true)};
+  return <AuthShell eyebrow="Account recovery" title="Reset your password" text="We’ll simulate sending a secure reset link.">{sent?<div className="rounded-2xl bg-emerald-50 p-6 text-emerald-900"><KeyRound size={25}/><h2 className="mt-3 text-lg font-bold">Check your inbox</h2><p className="mt-1 text-sm leading-6">A simulated reset link was created for {email}.</p><Link to="/reset-password?token=demo-reset-session"><Button className="mt-5">Open demo reset link</Button></Link></div>:<form onSubmit={submit} noValidate className="space-y-5"><AuthField label="Email address" icon={Mail} type="email" value={email} onChange={e=>setEmail(e.target.value)} error={error}/><Button className="w-full" disabled={loading}>{loading?"Sending…":"Send reset link"}</Button></form>}<p className="mt-6 text-center text-sm"><Link to="/login" className="font-bold text-teal">Back to sign in</Link></p></AuthShell>;
+}
+
+export function ResetPassword() {
+  const navigate=useNavigate(); const {toast}=useStore(); const [params]=useSearchParams(); const [form,setForm]=useState({password:"",confirm:""}); const [errors,setErrors]=useState({}); const [loading,setLoading]=useState(false);
+  const submit=async(e)=>{e.preventDefault();const next={};if(form.password.length<8)next.password="Use at least 8 characters.";if(form.confirm!==form.password)next.confirm="Passwords do not match.";setErrors(next);if(Object.keys(next).length)return;setLoading(true);await authService.resetPassword({token:params.get("token"),password:form.password});setLoading(false);toast("Password updated successfully");navigate("/login",{replace:true})};
+  return <AuthShell eyebrow="Choose a new password" title="Set new password" text="Enter a strong password for this simulated reset flow."><form onSubmit={submit} className="space-y-5"><AuthField label="New password" icon={LockKeyhole} type="password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})} error={errors.password}/><AuthField label="Confirm new password" icon={LockKeyhole} type="password" value={form.confirm} onChange={e=>setForm({...form,confirm:e.target.value})} error={errors.confirm}/><Button className="w-full" disabled={loading}>{loading?"Updating…":"Update password"}</Button></form></AuthShell>;
+}
+
+export function RequireRole({role = "researcher"}) {
+  const {user}=useStore(); const location=useLocation();
+  if(!user) return <Navigate to={`/login?redirect=${encodeURIComponent(location.pathname)}`} replace/>;
+  if(user.role!==role) return <Navigate to="/" replace/>;
+  return <Outlet/>;
+}

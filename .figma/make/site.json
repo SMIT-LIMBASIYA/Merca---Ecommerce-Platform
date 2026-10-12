@@ -1,0 +1,12 @@
+{
+  "title": "Merca",
+  "name": "Merca",
+  "description": "This UX research application simulates e-commerce shopping workflows to analyze user behavior, task completion, and errors, providing valuable insights for researchers.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
