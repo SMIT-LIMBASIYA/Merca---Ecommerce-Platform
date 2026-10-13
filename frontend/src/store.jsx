@@ -10,7 +10,13 @@ export function StoreProvider({ children }) {
   const [compare, setCompare] = useState([]);
   const [coupon, setCoupon] = useState("");
   const [toasts, setToasts] = useState([]);
-  const [task, setTask] = useState(() => JSON.parse(localStorage.getItem("eus-task") || "null"));
+  const [task, setTask] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("eus-task") || "null");
+    } catch {
+      return null;
+    }
+  });
   const [events, setEvents] = useState([]);
   const [user, setUser] = useState(() => authService.getSession());
   const [wishlist, setWishlist] = useState([]);
@@ -120,9 +126,27 @@ export function StoreProvider({ children }) {
     return { success, checks };
   };
   const login = async (values) => {
-    const next = await authService.login(values);
-    setUser(next);
-    toast(`Welcome back, ${next.name}`);
+    const res = await authService.login(values);
+    if (res.secretRequired) {
+      return res; // Prompt 2-step verification in UI
+    }
+    const loggedUser = res.user || res;
+    setUser(loggedUser);
+    toast(`Welcome back, ${loggedUser.name}`);
+    _restorePendingCart(loggedUser);
+    return loggedUser;
+  };
+
+  const verifySecretPassword = async (payload) => {
+    const res = await authService.verifySecretPassword(payload);
+    const loggedUser = res.user;
+    setUser(loggedUser);
+    toast(`Welcome back, ${loggedUser.name}`);
+    _restorePendingCart(loggedUser);
+    return loggedUser;
+  };
+
+  const _restorePendingCart = (loggedUser) => {
     try {
       const pendingStr = sessionStorage.getItem("eus-pending-cart");
       if (pendingStr) {
@@ -135,26 +159,14 @@ export function StoreProvider({ children }) {
     } catch {
       sessionStorage.removeItem("eus-pending-cart");
     }
-    return next;
   };
+
   const register = async (values) => {
-    const next = await authService.register(values);
-    setUser(next);
-    toast("Account created successfully");
-    try {
-      const pendingStr = sessionStorage.getItem("eus-pending-cart");
-      if (pendingStr) {
-        const { product, qty } = JSON.parse(pendingStr);
-        sessionStorage.removeItem("eus-pending-cart");
-        setCart((v) => v.some((x) => x.id === product.id) ? v.map((x) => x.id === product.id ? { ...x, qty: x.qty + qty } : x) : [...v, { ...product, qty }]);
-        record("add_to_cart", product.name, { quantity: qty, source: "post_register" });
-        toast(`${product.name} added to cart`);
-      }
-    } catch {
-      sessionStorage.removeItem("eus-pending-cart");
-    }
-    return next;
+    const res = await authService.register(values);
+    toast("Account registered successfully! Please sign in.");
+    return res;
   };
+
   const logout = () => {
     authService.logout();
     setUser(null);
@@ -164,9 +176,41 @@ export function StoreProvider({ children }) {
     setWishlist((current) => current.includes(id) ? current.filter((x) => x !== id) : [...current, id]);
     toast(wishlist.includes(id) ? "Removed from saved items" : "Saved for later");
   };
-  const subtotal = cart.reduce((sum, x) => sum + x.price * x.qty, 0);
-  const value = useMemo(() => ({ cart, setCart, compare, toggleCompare, coupon, setCoupon, subtotal, discount: coupon === "SAVE10" ? subtotal * .1 : 0, addCart, setQty, toast, toasts, dismissToast, task, startTask, updateTask, events, record, evaluate, user, login, register, logout, wishlist, toggleWishlist, setNavigator, theme, toggleTheme }), [cart, compare, coupon, subtotal, task, events, toasts, user, wishlist, navigator, theme]);
+  const subtotal = cart.reduce((sum, x) => sum + (x.price || 0) * (x.qty || 1), 0);
+  const value = useMemo(() => ({ cart, setCart, compare, toggleCompare, coupon, setCoupon, subtotal, discount: coupon === "SAVE10" ? subtotal * .1 : 0, addCart, setQty, toast, toasts, dismissToast, task, startTask, updateTask, events, record, evaluate, user, login, verifySecretPassword, register, logout, wishlist, toggleWishlist, setNavigator, theme, toggleTheme }), [cart, compare, coupon, subtotal, task, events, toasts, user, wishlist, navigator, theme]);
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
 
-export const useStore = () => useContext(StoreContext);
+const fallbackStore = {
+  cart: [],
+  setCart: () => {},
+  compare: [],
+  toggleCompare: () => {},
+  coupon: "",
+  setCoupon: () => {},
+  subtotal: 0,
+  discount: 0,
+  addCart: () => {},
+  setQty: () => {},
+  toast: () => {},
+  toasts: [],
+  dismissToast: () => {},
+  task: null,
+  startTask: () => {},
+  updateTask: () => {},
+  events: [],
+  record: () => {},
+  evaluate: () => ({ success: false }),
+  user: null,
+  login: async () => {},
+  verifySecretPassword: async () => {},
+  register: async () => {},
+  logout: () => {},
+  wishlist: [],
+  toggleWishlist: () => {},
+  setNavigator: () => {},
+  theme: "light",
+  toggleTheme: () => {},
+};
+
+export const useStore = () => useContext(StoreContext) || fallbackStore;

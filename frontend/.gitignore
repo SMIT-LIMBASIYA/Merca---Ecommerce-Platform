@@ -1,5 +1,17 @@
-node_modules
-dist
-dist-ssr
+# Dependencies
+node_modules/
+
+# Production builds
+dist/
+dist-ssr/
+.vite/
+
+# Environment files
+.env
+.env.*
+!.env.example
 *.local
+
+# OS files
 .DS_Store
+Thumbs.db

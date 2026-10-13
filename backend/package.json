@@ -1,0 +1,32 @@
+{
+  "name": "merca-backend",
+  "version": "1.0.0",
+  "description": "Backend API and Database Service for Merca E-Commerce Platform",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "db:migrate": "node db/migrate.js",
+    "db:test": "node db/test-connection.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "ioredis": "^5.6.0",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.13.1"
+  },
+  "keywords": [
+    "merca",
+    "ecommerce",
+    "postgresql",
+    "express",
+    "api"
+  ],
+  "author": "Merca Team",
+  "license": "ISC"
+}

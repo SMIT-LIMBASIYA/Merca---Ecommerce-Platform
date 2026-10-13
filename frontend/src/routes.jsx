@@ -3,7 +3,7 @@ import { AdminLayout, StoreLayout } from "./components";
 import { Analytics, Feedback, Logs, Overview, SessionDetail, Sessions, TaskManagement } from "./admin";
 import { Cart, Checkout, Compare, Confirmation, NotFound, TaskMode } from "./pages";
 import { Catalogue, Home, ProductDetails } from "./commerce-pages";
-import { ForgotPassword, Login, Register, RequireRole, ResetPassword } from "./auth";
+import { ForgotPassword, Login, Profile, Register, RequireRole, ResetPassword } from "./auth";
 
 export const router = createBrowserRouter([
   { path: "/", Component: StoreLayout, children: [
@@ -17,6 +17,7 @@ export const router = createBrowserRouter([
     { path: "task", Component: TaskMode },
     { path: "login", Component: Login },
     { path: "register", Component: Register },
+    { path: "profile", Component: Profile },
     { path: "forgot-password", Component: ForgotPassword },
     { path: "reset-password", Component: ResetPassword },
     { path: "*", Component: NotFound },

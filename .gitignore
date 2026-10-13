@@ -1,21 +1,59 @@
+# ============================================================================
+# Git Ignore Configuration - Merca Platform
+# ============================================================================
+
+# Dependencies
 node_modules/
+**/node_modules/
+
+# Production Builds
 dist/
+dist-ssr/
 build/
-.cache/
-.env*
+out/
 .vite/
 vite.config.*.timestamp-*
-*.tsbuildinfo
-*-debug.log*
+
+# Environment & Sensitive Files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+**/.env
+**/.env.*
+
+# Keep Example Templates in Git
+!.env.example
+!**/.env.example
+
+# Logs & Diagnostics
 logs/
 *.log
-.claude-replay.*
-.tmp-*
-/.figma/design-context/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# Platform-managed agentplat state, not project source. In the
-# client-initiated single-repo workspace layout (make's `Path: "."` spec) the
-# repo root IS the workspace root, so these land inside this repo rather than
-# beside it.
+# Caches & Temp
+.cache/
+.tmp-*
+.temp/
+*.tsbuildinfo
+
+# OS Metadata
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Editor / IDE artifacts
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Agent & Figma Cache
+.claude-replay.*
+/.figma/design-context/
 /.plugins/
 /.opencode-skills/
